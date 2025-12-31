@@ -28,6 +28,7 @@
 
         header { text-align: center; margin-bottom: 10px; flex-shrink: 0; }
         h2 { margin: 0; color: #333; font-weight: 600; }
+        .hint { font-size: 0.9em; color: #666; margin-top: 5px; }
 
         /* Toolbar */
         .toolbar {
@@ -200,6 +201,7 @@
 
     <header>
         <h2>Christmas Puzzle Solver</h2>
+        <div class="hint">ℹ️ Hint: Right-click on any cell to erase it (set to Gray).</div>
     </header>
 
     <div class="toolbar">
@@ -231,7 +233,7 @@
                 <textarea id="res3" readonly></textarea>
             </div>
             <div class="result-box">
-                <div class="box-title" style="color:#c62828; border-color:#ffcdd2;">4. Prank (Nuttin' for Christmas)</div>
+                <div class="box-title" style="color:#c62828; border-color:#ffcdd2;">4. Prank</div>
                 <textarea id="res4" style="color:#c62828;" readonly></textarea>
             </div>
             <div class="result-box">
@@ -278,7 +280,7 @@
             "eiaintbeennuttinbutbadibrokemybatonjohnnysheadsomebodysnitch"
         ];
 
-        // Reference Lyrics for auto-fill
+        // Reference Lyrics kept for potential future use, but not used in init
         const lyrics = {
             1: "awayinamangernocribforabedthelittlelordjesuslaiddownhissweetheadthestarsintheskylookeddownwherehelaythelittlelordjesusasleeponthehaythecattlearelowingthebabyawakesbutlittlelordjesusnocryinghemakesilovetheelordjesuslookdownfromtheskyandstaybymysideuntilmorningisnighbenearmelordjesusasktheetostayclosebymeforeverandlovemeiprayblessallthedearchildreninthytendercareandfitusforheaventolivewiththeethere",
             2: "oholynightthestarsarebrightlyshiningitisthenightofthedearsavioursbirthlonglaytheworldinsinanderrorpiningtillheappearedandthesoulfeltitsworthathrillofhopethewearyworldrejoicesforyonderbreaksanewandgloriousmornfallonyourkneesoheartheangelvoicesonightdivineonightwhenchristwasbornonightdivineonightonightdivineledbythelightoffaithserenelybeamingwithglowingheartsbyhiscradlewestandsoledbylightofastarsweetlygleamingtherecamethewisemenfromorientlandthekingofkingslaythusinlowlymangerinallourtrialsborntobefriendheknowsourneedtoourweaknessisnostrangerbeholdyourkingbeforehimlowlybendbeholdyourkingbeforehimlowlybendtrulyhetaughtustoloveoneanotherhislawisloveandhisgospelispeacechainsshallhebreakfortheslaveisourbrotherandinhisnamealloppressionshallceasesweethymnsofjoyingratefulchorusraiseweletallwithinuspraisehisholynamechrististhelordopraisehisnameforeverhispowrandgloryevermoreproclaimhispowrandgloryevermoreproclaim",
@@ -294,8 +296,6 @@
             gridEl.innerHTML = '';
             gridState = [];
 
-            let pointers = { 1: 0, 2: 0, 3: 0 };
-
             rawData.forEach((rowStr, rIndex) => {
                 const rowEl = document.createElement('div');
                 rowEl.className = 'grid-row';
@@ -305,53 +305,34 @@
                 numEl.textContent = (rIndex + 1);
                 rowEl.appendChild(numEl);
 
-                // Determine target song based on cycle (1, 2, 3)
-                const targetStream = (rIndex % 3) + 1;
                 const rowStateData = [];
-                const targetLyrics = lyrics[targetStream];
 
                 [...rowStr].forEach((char, cIndex) => {
                     const cell = document.createElement('div');
                     cell.textContent = char;
                     cell.id = `c-${rIndex}-${cIndex}`;
                     
-                    // Auto-fill Logic
-                    let assignedColor = 4; // Default to Prank (Red)
-
-                    if (pointers[targetStream] < targetLyrics.length) {
-                        const expectedChar = targetLyrics[pointers[targetStream]];
-                        if (char.toLowerCase() === expectedChar) {
-                            assignedColor = targetStream; // Match found
-                            pointers[targetStream]++;
-                        }
-                    }
+                    // Default to Gray (0)
+                    let assignedColor = 0;
 
                     cell.className = `cell color-${assignedColor}`;
                     rowStateData.push(assignedColor);
 
                     // MOUSE EVENTS
-                    // Left click (0): Paint
-                    // Right click (2): Erase (Gray)
                     cell.addEventListener('mousedown', (e) => {
                         isMouseDown = true;
                         
                         if (e.button === 2) {
-                            // Right click
+                            // Right click -> Gray
                             paintCell(rIndex, cIndex, 0); 
                         } else {
-                            // Left click
+                            // Left click -> Current Tool
                             paintCell(rIndex, cIndex, currentTool);
                         }
                     });
 
                     cell.addEventListener('mouseover', (e) => {
                         if (isMouseDown) {
-                            // Can't easily detect which button is held during drag, 
-                            // so we assume the tool based on the initial click would be better,
-                            // but for simplicity we use currentTool unless we implement drag state better.
-                            // However, let's keep it simple: Drag paints with selected tool.
-                            // To support right-click drag erase, we'd need more state. 
-                            // Current behavior: Drag always paints with selected tool.
                             paintCell(rIndex, cIndex, currentTool);
                         }
                     });
