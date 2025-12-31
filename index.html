@@ -201,7 +201,7 @@
 
     <header>
         <h2>Christmas Puzzle Solver</h2>
-        <div class="hint">ℹ️ Hint: Right-click on any cell to erase it (set to Gray).</div>
+        <div class="hint">ℹ️ Hint: Right-click on any cell to erase it (set to Gray). Auto-saves to local storage.</div>
     </header>
 
     <div class="toolbar">
@@ -296,6 +296,17 @@
             gridEl.innerHTML = '';
             gridState = [];
 
+            // Try to load from localStorage
+            const savedData = localStorage.getItem('christmasPuzzleState');
+            let savedGrid = null;
+            if (savedData) {
+                try {
+                    savedGrid = JSON.parse(savedData);
+                } catch(e) {
+                    console.error("Invalid save data");
+                }
+            }
+
             rawData.forEach((rowStr, rIndex) => {
                 const rowEl = document.createElement('div');
                 rowEl.className = 'grid-row';
@@ -312,8 +323,11 @@
                     cell.textContent = char;
                     cell.id = `c-${rIndex}-${cIndex}`;
                     
-                    // Default to Gray (0)
+                    // Default to Gray (0) or load from storage
                     let assignedColor = 0;
+                    if (savedGrid && savedGrid[rIndex] && savedGrid[rIndex][cIndex] !== undefined) {
+                        assignedColor = savedGrid[rIndex][cIndex];
+                    }
 
                     cell.className = `cell color-${assignedColor}`;
                     rowStateData.push(assignedColor);
@@ -437,6 +451,9 @@
             document.getElementById('res2').value = s2;
             document.getElementById('res3').value = s3;
             document.getElementById('res4').value = s4;
+            
+            // Save to localStorage
+            localStorage.setItem('christmasPuzzleState', JSON.stringify(gridState));
 
             if (updateExportBox) {
                 document.getElementById('exportData').value = JSON.stringify(gridState);
