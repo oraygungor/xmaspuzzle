@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Christmas Puzzle Solver</title>
+    <style>
+        :root {
+            --c1-bg: #e8f5e9; --c1-text: #2e7d32; /* Green */
+            --c2-bg: #e3f2fd; --c2-text: #1565c0; /* Blue */
+            --c3-bg: #fffde7; --c3-text: #f9a825; /* Orange/Yellow */
+            --c4-bg: #ffebee; --c4-text: #c62828; /* Red (Prank) */
+            --noise-bg: #eeeeee; --noise-text: #bdbdbd; /* Gray (Noise) */
+            --bg-body: #f8f9fa;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-body);
+            color: #333;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            margin: 0;
+            box-sizing: border-box;
+        }
+
+        header { text-align: center; margin-bottom: 10px; flex-shrink: 0; }
+        h2 { margin: 0; color: #333; font-weight: 600; }
+
+        /* Toolbar */
+        .toolbar {
+            background: white;
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-shrink: 0;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            border: 2px solid transparent;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.2s ease;
+            user-select: none;
+        }
+
+        .btn:hover { transform: translateY(-1px); filter: brightness(0.95); }
+        .btn:active { transform: translateY(0); }
+        
+        .btn-green { background: var(--c1-bg); color: var(--c1-text); border-color: #c8e6c9; }
+        .btn-green.active { background: #c8e6c9; border-color: var(--c1-text); box-shadow: inset 0 2px 4px rgba(0,0,0,0.1); }
+
+        .btn-blue { background: var(--c2-bg); color: var(--c2-text); border-color: #bbdefb; }
+        .btn-blue.active { background: #bbdefb; border-color: var(--c2-text); box-shadow: inset 0 2px 4px rgba(0,0,0,0.1); }
+
+        .btn-orange { background: var(--c3-bg); color: var(--c3-text); border-color: #fff9c4; }
+        .btn-orange.active { background: #fff9c4; border-color: var(--c3-text); box-shadow: inset 0 2px 4px rgba(0,0,0,0.1); }
+
+        .btn-red { background: var(--c4-bg); color: var(--c4-text); border-color: #ffcdd2; }
+        .btn-red.active { background: #ffcdd2; border-color: var(--c4-text); box-shadow: inset 0 2px 4px rgba(0,0,0,0.1); }
+
+        .btn-gray { background: var(--noise-bg); color: #757575; border-color: #e0e0e0; }
+        .btn-gray.active { background: #e0e0e0; border-color: #757575; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1); }
+
+        .btn-reset { background: #333; color: #fff; margin-left: auto; }
+        .btn-reset:hover { background: #555; }
+
+        /* Workspace */
+        .workspace {
+            display: flex;
+            gap: 20px;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* Grid Area */
+        .grid-container {
+            flex: 2;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            padding: 20px;
+            overflow: auto;
+            border: 1px solid #eee;
+        }
+
+        .puzzle-grid {
+            display: inline-grid;
+            gap: 2px;
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: bold;
+            font-size: 15px;
+            user-select: none;
+        }
+
+        .grid-row { display: flex; }
+
+        .cell {
+            width: 18px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border-radius: 2px;
+            transition: background-color 0.1s;
+        }
+
+        .row-num {
+            width: 30px;
+            color: #ccc;
+            font-size: 11px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            margin-right: 8px;
+        }
+
+        /* Colors */
+        .color-1 { background-color: var(--c1-bg); color: var(--c1-text); }
+        .color-2 { background-color: var(--c2-bg); color: var(--c2-text); }
+        .color-3 { background-color: var(--c3-bg); color: var(--c3-text); }
+        .color-4 { background-color: var(--c4-bg); color: var(--c4-text); }
+        .color-0 { background-color: var(--noise-bg); color: var(--noise-text); }
+
+        /* Results Panel */
+        .results-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            overflow-y: auto;
+            padding-right: 5px;
+        }
+
+        .result-box {
+            background: white;
+            padding: 12px;
+            border-radius: 8px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .box-title { 
+            font-size: 12px; 
+            text-transform: uppercase; 
+            letter-spacing: 0.5px;
+            font-weight: bold; 
+            margin-bottom: 8px; 
+            padding-bottom: 4px; 
+            border-bottom: 2px solid #eee; 
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .t-green { color: var(--c1-text); border-color: var(--c1-text); }
+        .t-blue { color: var(--c2-text); border-color: var(--c2-text); }
+        .t-orange { color: var(--c3-text); border-color: var(--c3-text); }
+
+        textarea {
+            width: 100%;
+            min-height: 50px;
+            border: 1px solid #eee;
+            resize: vertical;
+            font-family: 'Segoe UI', sans-serif;
+            font-size: 13px;
+            color: #444;
+            background: #fafafa;
+            padding: 8px;
+            border-radius: 4px;
+            box-sizing: border-box;
+            outline: none;
+        }
+        
+        textarea:focus { border-color: #ddd; background: white; }
+
+        .export-area {
+            font-family: monospace;
+            font-size: 11px;
+            color: #333;
+            min-height: 60px;
+            background: #fffDE7; /* Light yellow to indicate editable */
+            border: 1px solid #FFD54F;
+        }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <h2>Christmas Puzzle Solver</h2>
+    </header>
+
+    <div class="toolbar">
+        <button class="btn btn-green active" onclick="selectTool(1)">Green (Away in a Manger)</button>
+        <button class="btn btn-blue" onclick="selectTool(2)">Blue (O Holy Night)</button>
+        <button class="btn btn-orange" onclick="selectTool(3)">Yellow (Silent Night)</button>
+        <button class="btn btn-red" onclick="selectTool(4)">Red (Prank)</button>
+        <button class="btn btn-gray" onclick="selectTool(0)">Gray (Eraser)</button>
+        
+        <button class="btn btn-reset" onclick="resetAllToGray()">Reset All (Gray)</button>
+    </div>
+
+    <div class="workspace">
+        <div class="grid-container" oncontextmenu="return false;"> <!-- Disable default context menu -->
+            <div id="grid" class="puzzle-grid"></div>
+        </div>
+
+        <div class="results-panel">
+            <div class="result-box">
+                <div class="box-title t-green">1. Away in a Manger</div>
+                <textarea id="res1" readonly></textarea>
+            </div>
+            <div class="result-box">
+                <div class="box-title t-blue">2. O Holy Night</div>
+                <textarea id="res2" readonly></textarea>
+            </div>
+            <div class="result-box">
+                <div class="box-title t-orange">3. Silent Night</div>
+                <textarea id="res3" readonly></textarea>
+            </div>
+            <div class="result-box">
+                <div class="box-title" style="color:#c62828; border-color:#ffcdd2;">4. Prank (Nuttin' for Christmas)</div>
+                <textarea id="res4" style="color:#c62828;" readonly></textarea>
+            </div>
+            <div class="result-box">
+                <div class="box-title" style="color:#333; border-color:#333;">Data Output (Editable JSON)</div>
+                <textarea id="exportData" class="export-area" placeholder="Paste data here to update grid..."></textarea>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const rawData = [
+            "imawayinamangernocribfgetorabedthelitTltIneLornuttinfodjesrc",
+            "oholynightthrhestarsaristEbrIghTlyShmIniNasMgiTioSthEniGhtof",
+            "siLmmyanentddnighthOlyAdnIghTalLisDycAlmAarEmaDimAllIsbRigHg",
+            "etUslAydownhiSswEetHeaTidTheStaRsiNthEbrNniGhtUttInfOrsKylCh",
+            "ouRdeArSAvIRoUrsBirThlOisNglAytHewOrtLdiNmaSsiNacNdeRroRpiNi",
+            "trOaUSeIUnDAyONvINtIrgIbnMotHerAndCehIldHenNutTinOlyInfAntSo",
+            "bUTbADiBRoOOkEDkEMyBAtOndOwnWjoHnnYheRehShELayEaDSoMEbtHeLOd",
+            "ySNnGTiLItCHlHEaEDoPPeANmEihRedAniDafDtHErOGsoUliFelTnSIsTEr",
+            "teNsbedSdeROaNDmMEbILdSOlEEpDysInhEnAVenLitCheDonYpeAmeIceSl",
+            "spIlledsomittlEeiNkoNmOMlOrdMysRugUhjEsUOhsAslImaDetOmeEpoMy",
+            "eaTitswoAbugrthaoOgtHriHboUglLofHhtsoopEtmegheweuAryWmwIthAp",
+            "eePenNysInhLeaVeuGsnlypOeacemebsileOntNIgdYsnItcHhtHoeDOlyNi",
+            "nmEoHImgEtNTheHtiNnuTtinaythforchriSecAttmtleAreLowingTheBAs",
+            "moMorLdrMyANeJoiDDaCEsfddYarOryOneMAdDerBReaksaniEwaNdgLorIm",
+            "ghTgsHeePhetrdsqtInuAkenatthesigHtuTglORITINfoRcHEsSTrISreAm",
+            "tMabYaasCawakesuseiAintbthEleEnNUTtIittLnbueloRdjEsuSnOCrYTb",
+            "aDiousmOpuTArnFataclLOnkOnTEyOUrkacheneeSohEarThrEanGeLvoIcs",
+            "fRocMheHavEanAfaIRsRHEaOVeNlYhoStmEbsSinGodYsnItcAllEhEdluia",
+            "oNinghmeitemaKeiEdaknOtISilonsuZyshavEtHirsOmebodYsniteeloch",
+            "edOesOniNmeIghtddidIvInADaNcEOnigEonmHtWhommenchyristsplantc",
+            "chrlistiThemsaVibeDOURIASBOrTRnCHreeistThandtoremesavypaiour",
+            "ntrdjessFuslookillEdtHaTdOWnfsugarbromtHoweskylwithantandsss",
+            "omewaSbobodyrnonsNiighttCHeDdivinonmeeonioHigHtomnighgettinn",
+            "isBuorntsiltenTniNfiGhtohOlYrcHnighrtsonoistmasmOgodlmmyoves",
+            "antaybymycrAdlEddaddyaretIlLmorniNgiSnigmahbenearmelorDJesdi",
+            "mgetDiviTtinnetrulyhetanuttiughtunforstOlcHrovEoiNeanotherhi",
+            "purelightrasdIenTmaTbeAsmSfrCauOmtHsyHolyfacewitehtHedawnoFr",
+            "iaiusiasktheeNtbEenNuttinTosTayclosebymbutbeforevErandLoaDso",
+            "youslawibettesloveandhrbegooisgosdwhapelIteVspeaecechainssha",
+            "redyeemoinUdoGgracejescausloUseRdaTitHybirthjesufslordatthyy",
+            "ourebadimwarningyouyoullgEtnUttinforchristmasimgettinnuttinf",
+            "orchristmasmommyandDaddyaRemadimgettinnuttinforchristmascaus",
+            "eiaintbeennuttinbutbadibrokemybatonjohnnysheadsomebodysnitch"
+        ];
+
+        // Reference Lyrics for auto-fill
+        const lyrics = {
+            1: "awayinamangernocribforabedthelittlelordjesuslaiddownhissweetheadthestarsintheskylookeddownwherehelaythelittlelordjesusasleeponthehaythecattlearelowingthebabyawakesbutlittlelordjesusnocryinghemakesilovetheelordjesuslookdownfromtheskyandstaybymysideuntilmorningisnighbenearmelordjesusasktheetostayclosebymeforeverandlovemeiprayblessallthedearchildreninthytendercareandfitusforheaventolivewiththeethere",
+            2: "oholynightthestarsarebrightlyshiningitisthenightofthedearsavioursbirthlonglaytheworldinsinanderrorpiningtillheappearedandthesoulfeltitsworthathrillofhopethewearyworldrejoicesforyonderbreaksanewandgloriousmornfallonyourkneesoheartheangelvoicesonightdivineonightwhenchristwasbornonightdivineonightonightdivineledbythelightoffaithserenelybeamingwithglowingheartsbyhiscradlewestandsoledbylightofastarsweetlygleamingtherecamethewisemenfromorientlandthekingofkingslaythusinlowlymangerinallourtrialsborntobefriendheknowsourneedtoourweaknessisnostrangerbeholdyourkingbeforehimlowlybendbeholdyourkingbeforehimlowlybendtrulyhetaughtustoloveoneanotherhislawisloveandhisgospelispeacechainsshallhebreakfortheslaveisourbrotherandinhisnamealloppressionshallceasesweethymnsofjoyingratefulchorusraiseweletallwithinuspraisehisholynamechrististhelordopraisehisnameforeverhispowrandgloryevermoreproclaimhispowrandgloryevermoreproclaim",
+            3: "silentnightholynightalliscalmallisbrightroundyonvirginmotherandchildholyinfantsotenderandmildsleepinheavenlypeacesleepinheavenlypeacesilentnightholynightdarknessfliesallislightshepherdsquakenatthesightgloriesstreamfromheavenafarheavenlyhostssingallelujahchristthesaviorisbornchristthesaviorisbornsilentnightholynightsonofgodlovespurelightradiantbeamsfromthyholyfacewiththedawnofredeeminggracejesuslordatthybirthjesuslordatthybirthsilentnightholynightwondrousstarlendthelightwiththeangelsletussingalleluiatoourkingchristthesaviorisbornchristthesaviorisborn"
+        };
+
+        let gridState = [];
+        let currentTool = 1; 
+        let isMouseDown = false;
+
+        function init() {
+            const gridEl = document.getElementById('grid');
+            gridEl.innerHTML = '';
+            gridState = [];
+
+            let pointers = { 1: 0, 2: 0, 3: 0 };
+
+            rawData.forEach((rowStr, rIndex) => {
+                const rowEl = document.createElement('div');
+                rowEl.className = 'grid-row';
+
+                const numEl = document.createElement('div');
+                numEl.className = 'row-num';
+                numEl.textContent = (rIndex + 1);
+                rowEl.appendChild(numEl);
+
+                // Determine target song based on cycle (1, 2, 3)
+                const targetStream = (rIndex % 3) + 1;
+                const rowStateData = [];
+                const targetLyrics = lyrics[targetStream];
+
+                [...rowStr].forEach((char, cIndex) => {
+                    const cell = document.createElement('div');
+                    cell.textContent = char;
+                    cell.id = `c-${rIndex}-${cIndex}`;
+                    
+                    // Auto-fill Logic
+                    let assignedColor = 4; // Default to Prank (Red)
+
+                    if (pointers[targetStream] < targetLyrics.length) {
+                        const expectedChar = targetLyrics[pointers[targetStream]];
+                        if (char.toLowerCase() === expectedChar) {
+                            assignedColor = targetStream; // Match found
+                            pointers[targetStream]++;
+                        }
+                    }
+
+                    cell.className = `cell color-${assignedColor}`;
+                    rowStateData.push(assignedColor);
+
+                    // MOUSE EVENTS
+                    // Left click (0): Paint
+                    // Right click (2): Erase (Gray)
+                    cell.addEventListener('mousedown', (e) => {
+                        isMouseDown = true;
+                        
+                        if (e.button === 2) {
+                            // Right click
+                            paintCell(rIndex, cIndex, 0); 
+                        } else {
+                            // Left click
+                            paintCell(rIndex, cIndex, currentTool);
+                        }
+                    });
+
+                    cell.addEventListener('mouseover', (e) => {
+                        if (isMouseDown) {
+                            // Can't easily detect which button is held during drag, 
+                            // so we assume the tool based on the initial click would be better,
+                            // but for simplicity we use currentTool unless we implement drag state better.
+                            // However, let's keep it simple: Drag paints with selected tool.
+                            // To support right-click drag erase, we'd need more state. 
+                            // Current behavior: Drag always paints with selected tool.
+                            paintCell(rIndex, cIndex, currentTool);
+                        }
+                    });
+
+                    rowEl.appendChild(cell);
+                });
+
+                gridState.push(rowStateData);
+                gridEl.appendChild(rowEl);
+            });
+
+            document.addEventListener('mouseup', () => { isMouseDown = false; });
+            
+            // Listen for changes in the Data Output box
+            const exportBox = document.getElementById('exportData');
+            exportBox.addEventListener('input', handleDataInput);
+
+            updateResults();
+        }
+
+        function selectTool(toolId) {
+            currentTool = toolId;
+            document.querySelectorAll('.btn').forEach(b => b.classList.remove('active'));
+            
+            let btnClass = '';
+            if(toolId === 1) btnClass = '.btn-green';
+            if(toolId === 2) btnClass = '.btn-blue';
+            if(toolId === 3) btnClass = '.btn-orange';
+            if(toolId === 4) btnClass = '.btn-red';
+            if(toolId === 0) btnClass = '.btn-gray';
+            
+            const btn = document.querySelector(btnClass);
+            if(btn) btn.classList.add('active');
+        }
+
+        function paintCell(r, c, toolId) {
+            gridState[r][c] = toolId;
+            
+            const cell = document.getElementById(`c-${r}-${c}`);
+            if (cell) cell.className = `cell color-${toolId}`;
+            
+            updateResults(true); // true = called from user interaction
+        }
+
+        function resetAllToGray() {
+            for(let r=0; r<gridState.length; r++) {
+                for(let c=0; c<gridState[r].length; c++) {
+                    gridState[r][c] = 0; // Gray
+                    const cell = document.getElementById(`c-${r}-${c}`);
+                    if(cell) cell.className = 'cell color-0';
+                }
+            }
+            updateResults(true);
+        }
+
+        function handleDataInput(e) {
+            const val = e.target.value;
+            try {
+                const newState = JSON.parse(val);
+                
+                // Simple validation: must be array and match dimensions
+                if (Array.isArray(newState) && newState.length === rawData.length) {
+                    gridState = newState;
+                    
+                    // Re-render DOM classes
+                    for(let r=0; r<gridState.length; r++) {
+                        for(let c=0; c<gridState[r].length; c++) {
+                            const color = gridState[r][c];
+                            const cell = document.getElementById(`c-${r}-${c}`);
+                            if(cell) cell.className = `cell color-${color}`;
+                        }
+                    }
+                    
+                    // Update text outputs, but DON'T update the textarea itself to avoid cursor jumping
+                    updateResults(false); 
+                }
+            } catch (err) {
+                // Invalid JSON, ignore
+            }
+        }
+
+        function updateResults(updateExportBox = true) {
+            let s1 = "", s2 = "", s3 = "", s4 = "";
+
+            gridState.forEach((row, r) => {
+                row.forEach((colorCode, c) => {
+                    const char = rawData[r][c];
+                    if (char.trim() !== "") {
+                        if(colorCode === 1) s1 += char;
+                        else if(colorCode === 2) s2 += char;
+                        else if(colorCode === 3) s3 += char;
+                        else if(colorCode === 4) s4 += char;
+                    }
+                });
+                if(row.includes(1)) s1 += " ";
+                if(row.includes(2)) s2 += " ";
+                if(row.includes(3)) s3 += " ";
+                if(row.includes(4)) s4 += " ";
+            });
+
+            document.getElementById('res1').value = s1;
+            document.getElementById('res2').value = s2;
+            document.getElementById('res3').value = s3;
+            document.getElementById('res4').value = s4;
+
+            if (updateExportBox) {
+                document.getElementById('exportData').value = JSON.stringify(gridState);
+            }
+        }
+
+        // Initialize on load
+        init();
+
+    </script>
+</body>
+</html>
